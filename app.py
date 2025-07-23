@@ -6,6 +6,7 @@ app = create_app()
 
 def start_background_services():
     threading.Thread(target=lambda: run_mqtt_service(app), daemon=True).start()
+    
    
 if __name__=="__main__":
     start_background_services()

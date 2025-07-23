@@ -1,3 +1,4 @@
+from app.src.model.schemas import riwayat_presensi
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
@@ -29,6 +30,6 @@ def create_app():
     db.init_app(app)
     migrate.init_app(app, db)
     socketio.init_app(app) # Pasang SocketIO ke Flask app
-    from app.src.model.schemas import data_karyawan,data_presensi
+    from app.src.model.schemas import data_karyawan
     
     return app

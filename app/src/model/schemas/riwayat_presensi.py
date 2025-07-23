@@ -1,6 +1,6 @@
 from app import db
 from app.src.utils.get_timezone import get_timezone
-class DataPresensi(db.Model):
+class RiwayatPresensi(db.Model):
     __tablename__='data_presensi'
     id = db.Column(db.Integer, primary_key=True)
     waktu_masuk = db.Column(db.DateTime(timezone=True), default=get_timezone)
