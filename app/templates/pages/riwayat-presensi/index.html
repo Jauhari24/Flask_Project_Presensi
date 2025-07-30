@@ -1,0 +1,140 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<section class="max-w-6xl mx-auto px-6 py-8 bg-white rounded-lg shadow-md mt-6">
+  <div class="flex items-center justify-between flex-wrap gap-4 mb-6">
+    <h2 class="text-2xl font-bold text-gray-800">Riwayat Presensi</h2>
+
+    <!-- Form Filter Tanggal -->
+    <form method="GET" action="{{ url_for('main.riwayat_presensi') }}" class="flex items-center gap-2">
+      <label for="tanggal" class="text-gray-600 text-sm hidden sm:block">Pilih Tanggal:</label>
+      <input type="date" id="tanggal" name="tanggal" class="border rounded-md px-3 py-2 text-sm text-gray-700"
+        value="{{ tanggal|default('', true) }}">
+      <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm">
+        Filter
+      </button>
+    </form>
+  </div>
+
+  {% if tanggal %}
+  <div class="text-sm text-gray-600 mb-4">
+    Menampilkan presensi untuk tanggal:
+    <span class="font-semibold text-blue-600">{{ tanggal }}</span>
+  </div>
+  {% endif %}
+
+  <!-- Filter Jumlah Data per Halaman -->
+  <div class="flex justify-between mb-4">
+    <div>
+      <label for="perPageSelect" class="text-sm text-gray-700">Tampilkan</label>
+      <select id="perPageSelect" class="border px-2 py-1 rounded text-sm">
+        <option value="10">10</option>
+        <option value="25">25</option>
+        <option value="50">50</option>
+        <option value="100">100</option>
+      </select>
+      <span class="text-sm text-gray-700">data per halaman</span>
+    </div>
+  </div>
+
+  <!-- Tabel Presensi -->
+  <div class="overflow-x-auto">
+    <table class="min-w-full bg-white border border-gray-200 rounded-md shadow-sm text-sm text-left">
+      <thead class="bg-gray-100 text-gray-700 uppercase text-xs">
+        <tr>
+          <th class="px-4 py-3 border-b">ID Kartu</th>
+          <th class="px-4 py-3 border-b">Nama Karyawan</th>
+          <th class="px-4 py-3 border-b">Foto Karyawan</th>
+          <th class="px-4 py-3 border-b">Jam Masuk</th>
+          <th class="px-4 py-3 border-b">Status</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody" class="text-gray-700">
+        <!-- Data akan diisi oleh JavaScript -->
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination Controls -->
+  <div id="paginationControls" class="flex justify-center mt-4 space-x-1 text-sm"></div>
+</section>
+
+<!-- JavaScript Pagination -->
+<script>
+  const dataPresensi = {{ data_riwayat_presensi| tojson | safe }};
+  let currentPage = 1;
+  let perPage = 10;
+
+  const tableBody = document.getElementById('tableBody');
+  const paginationControls = document.getElementById('paginationControls');
+  const perPageSelect = document.getElementById('perPageSelect');
+
+  perPageSelect.addEventListener('change', () => {
+    perPage = parseInt(perPageSelect.value);
+    currentPage = 1;
+    renderTable();
+    renderPagination();
+  });
+
+  function renderTable() {
+    tableBody.innerHTML = '';
+    const start = (currentPage - 1) * perPage;
+    const end = start + perPage;
+    const pageItems = dataPresensi.slice(start, end);
+
+    if (pageItems.length === 0) {
+      tableBody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-gray-500">Tidak ada data presensi.</td></tr>`;
+      return;
+    }
+
+    for (const item of pageItems) {
+      const foto = item.data_karyawan.foto;
+      const statusText = item.status ? 'Hadir' : 'Tidak Hadir';
+      const statusClass = item.status ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700';
+
+      const waktu = new Date(item.waktu_dibuat);
+      const waktuFormatted = waktu.toLocaleDateString('id-ID') + ' ' + waktu.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+
+      const row = `
+        <tr class="hover:bg-gray-50">
+          <td class="px-4 py-2 border-b">${item.data_karyawan.id_kartu}</td>
+          <td class="px-4 py-2 border-b">${item.data_karyawan.nama}</td>
+          <td class="px-4 py-2 border-b">
+            ${foto
+          ? `<img src="/static/uploads/${foto}" class="h-10 w-10 rounded-full object-cover" alt="Foto">`
+          : `<span class="text-gray-400 italic">Tidak ada foto</span>`
+        }
+          </td>
+          <td class="px-4 py-2 border-b">${waktuFormatted}</td>
+          <td class="px-4 py-2 border-b">
+            <span class="px-2 py-1 rounded-full text-xs font-semibold ${statusClass}">
+              ${statusText}
+            </span>
+          </td>
+        </tr>
+      `;
+      tableBody.insertAdjacentHTML('beforeend', row);
+    }
+  }
+
+  function renderPagination() {
+    paginationControls.innerHTML = '';
+    const totalPages = Math.ceil(dataPresensi.length / perPage);
+    for (let i = 1; i <= totalPages; i++) {
+      const btn = document.createElement('button');
+      btn.textContent = i;
+      btn.className = `px-3 py-1 rounded ${i === currentPage ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-gray-200'}`;
+      btn.addEventListener('click', () => {
+        currentPage = i;
+        renderTable();
+        renderPagination();
+      });
+      paginationControls.appendChild(btn);
+    }
+  }
+
+  // Inisialisasi
+  renderTable();
+  renderPagination();
+</script>
+{% endblock %}

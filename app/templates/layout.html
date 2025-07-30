@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en" x-data="{ sidebarOpen: false, sidebarMinimized: false }">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard Presensi</title>
+
+  <!-- Meta SEO -->
+  <meta name="description"
+    content="Pantau dan kelola sistem Presensi secara real-time melalui Dashboard yang responsif dan informatif." />
+  <meta name="keywords" content="Dashboard Presensi" />
+  <meta name="author" content="Nama Tim atau Instansi" />
+
+  <!-- OG & Twitter -->
+  <meta property="og:title" content="Dashboard Presensi" />
+  <meta property="og:description"
+    content="Pantau sistem Presensi secara langsung dengan tampilan dashboard interaktif." />
+  <meta property="og:image" content="{{ url_for('static', filename='img/preview.jpg') }}" />
+  <meta property="og:url" content="{{ request.url }}" />
+  <meta property="og:type" content="website" />
+
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Dashboard Presensi" />
+  <meta name="twitter:description"
+    content="Pantau sistem Presensi secara real-time dengan fitur canggih dan tampilan modern." />
+  <meta name="twitter:image" content="{{ url_for('static', filename='img/preview.jpg') }}" />
+
+  <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon" />
+
+  <!-- TailwindCSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+  {% block style %}{% endblock %}
+</head>
+
+<body class="bg-gray-100 min-h-screen font-sans">
+  <!-- Navbar Include -->
+  {% include 'components/navbar.html' %}
+
+  <!-- Main Content -->
+  <main class="p-6 md:p-10 max-w-7xl mx-auto">
+    {% block content %}{% endblock %}
+  </main>
+
+  {% block scripts %}{% endblock %}
+
+
+</body>
+
+</html>
