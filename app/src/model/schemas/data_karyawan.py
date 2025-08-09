@@ -5,6 +5,6 @@ class DataKaryawan(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     nama = db.Column(db.String(250), nullable=False) 
     id_kartu = db.Column(db.String(50), unique=True, nullable=False)  # ✅ ubah dari Integer ke String
-    foto = db.Column(db.String(250), nullable=False) 
+    gambar =  db.relationship('Gambar', backref='data_karyawan', lazy=True)
     waktu_dibuat = db.Column(db.DateTime(timezone=True), default=get_timezone)
     waktu_diubah = db.Column(db.DateTime(timezone=True), default=get_timezone)

@@ -20,12 +20,45 @@ PASSWORD = os.environ.get("MQTT_PASSWORD")
 
 # Topik yang digunakan
 TOPICS = [
-    ("presensi/rfid", 1),
-    ("kirim/pesan", 1)
+    ("alat/login_status", 1),
+    ("alat/register_status",1),
+    ("alat/message",1),
+    ("data/rfid/login",1),
+    ("data/rfid/register", 1),
 ]
 
 client = None
 app_context = None
+
+
+latest_card_data = {
+    "login": None,
+    "register": None,
+}
+
+card_last_seen = {
+    "login": None,
+    "register": None,
+}
+
+card_last_value = {
+    "login": None,
+    "register": None,
+}
+
+card_last_change = {
+    "login": None,
+    "register": None,
+}
+
+card_alert_sent = {
+    "login": None,
+    "register": None,
+}
+
+check_times = [1, 2, 3, 4, 5, 10, 24]  # jam
+
+SENSOR_RESET_SECONDS = 60  # Reset fingerprint setiap 120 detik
 
 # Callback jika berhasil connect ke broker
 def on_connect(client, userdata, flags, reason_code, properties):
@@ -42,43 +75,70 @@ def on_connect(client, userdata, flags, reason_code, properties):
         print(f"   PORT: {PORT}")
         print(f"   Kode Reason: {reason_code}")
 
-# Callback default jika topik tidak punya handler khusus
-def on_message(client, userdata, msg):
-    print(f"📬 [Default Handler] Topik: {msg.topic} | Data: {msg.payload.decode().strip()}")
 
 # Callback untuk topik presensi/rfid
-def handle_rfid(client, userdata, msg):
-    payload = msg.payload.decode().strip()
-    topic = msg.topic
-    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    print(f"📨 Data RFID Masuk: {payload} pada {now}")
+def handle_rfid_data_factory(app_instance):
+    def handle_rfid_data(client, userdata, message):
+        topic = message.topic
+        value = message.payload.decode('utf-8').strip()
 
-    try:
-        hasil = proses_presensi_rfid(payload, now)
-        print(hasil)
-        socketio.emit("update_presensi", hasil)
-    except Exception as e:
-        print(f"❌ Error handle_rfid: {e}")
-        socketio.emit("mqtt_error", {"error": str(e)})
+        mapping = {
+            "data/rfid/register": "register",
+            "data/rfid/login": "login",
+        }
+        label = mapping.get(topic)
+        if label == "register":
+            # Normalisasi UID agar format sama antara alat & server
+            # Contoh: "ab 3f 12 c9" -> "AB 3F 12 C9"
+            uid_value = " ".join(value.split()).upper()
 
-# Callback untuk topik kirim/pesan
-def handle_pesan(client, userdata, msg):
-    payload = msg.payload.decode().strip()
-    topic = msg.topic
-    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    print(f"📨 Pesan Diterima: {payload} pada {now}")
+            now = datetime.now()
+            last_val = card_last_value[label]
 
-    try:
-        # Kirim ke UI
-        socketio.emit("pesan_masuk", {"waktu": now, "pesan": payload})
-    except Exception as e:
-        print(f"❌ Error handle_pesan: {e}")
-        socketio.emit("mqtt_error", {"error": str(e)})
+            if last_val != uid_value:
+                card_last_change[label] = now
+                card_last_value[label] = uid_value
+                print(f"📡 Data register terkirim: {uid_value}")
+            
+            latest_card_data[label] = uid_value
+            card_last_seen[label] = now
+            print(f"📥 Data {label} diterima: {uid_value}")
+
+            socketio.emit("rfid_update", latest_card_data)
+
+        # ✅ Bungkus bagian yang mengakses Flask context
+        if label == "login":
+            with app_instance.app_context():
+                
+                print(f"📥 Data login diterima: {value}")
+    
+    return handle_rfid_data
+        
+        
+def check_card_status():
+    now = datetime.now()
+    updated = False
+
+    for label in latest_card_data:
+        last_seen = card_last_seen.get(label)
+        val = latest_card_data[label]
+
+        # Reset jika tidak ada pembaruan selama 120 detik
+        if last_seen and (now - last_seen).total_seconds() > SENSOR_RESET_SECONDS:
+            if val is not None:
+                latest_card_data[label] = None
+                card_last_seen[label] = None
+                card_last_value[label] = None
+                print(f"⏳ rfid '{label}' direset setelah 60 detik tidak ada update.")
+                updated = True
+
+    if updated:
+        socketio.emit("finger_update", latest_card_data)
+    
 
 # Jalankan koneksi MQTT
 def run_mqtt_service(app_instance):
-    global client, app_context
-    app_context = app_instance
+    global client
 
     print(f"🚀 Menghubungkan ke MQTT Broker {BROKER}:{PORT}")
     print(f"🔐 USERNAME: {USERNAME}")
@@ -89,18 +149,55 @@ def run_mqtt_service(app_instance):
     client.tls_set(ca_certs=certifi.where(), tls_version=ssl.PROTOCOL_TLS_CLIENT)
 
     client.on_connect = on_connect
-    client.on_message = on_message  # default handler
-    client.message_callback_add("presensi/rfid", handle_rfid)
-    client.message_callback_add("kirim/pesan", handle_pesan)
+    client.message_callback_add("data/rfid/login", handle_rfid_data_factory(app_instance))
+    client.message_callback_add("data/rfid/register", handle_rfid_data_factory(app_instance))
 
     try:
-        client.connect(BROKER, PORT)
-        client.loop_start()
-    except Exception as e:
-        print(f"❌ Gagal koneksi ke MQTT: {e}")
-        socketio.emit("mqtt_error", {"error": str(e)})
+        # ✅ Connect ke broker
+        client.connect(BROKER, PORT, keepalive=60)
 
-# Fungsi dummy untuk proses_presensi_rfid (silakan ganti sesuai logika asli)
-def proses_presensi_rfid(payload, waktu):
-    print(f"[Simulasi] Proses presensi RFID untuk ID {payload} pada {waktu}")
-    return {"tipe": "RFID", "waktu": waktu, "id_kartu": payload}
+        # ✅ Jalankan loop MQTT di thread terpisah
+        client.loop_start()
+        while True:
+            check_card_status()
+            time.sleep(30)  # cek status fingerprint setiap 30 detik
+
+    except KeyboardInterrupt:
+        print("🛑 Memutuskan koneksi MQTT...")
+        client.disconnect()
+        client.loop_stop()
+        
+        
+# 📤 Kirim perintah login ke ESP32
+def send_login_command(msg="1"):
+    if client:
+        try:
+            client.publish("alat/login_status", msg)
+            print("📤 Kirim perintah 'login/status' ke ESP32")
+        except Exception as e:
+            print(f"❌ Gagal kirim perintah login: {e}")
+    else:
+        print("❌ Client MQTT belum tersedia")
+
+
+# 📤 Kirim perintah register ke ESP32
+def send_register_command(msg="0"):
+    if client:
+        try:
+            client.publish("alat/register_status", msg)
+            print("📤 Kirim perintah 'register/status' ke ESP32")
+        except Exception as e:
+            print(f"❌ Gagal kirim perintah register: {e}")
+    else:
+        print("❌ Client MQTT belum tersedia")
+
+
+def send_message_command(msg):
+    if client:
+        try:
+            client.publish("alat/message", msg)
+            print(f"📤 Kirim pesan ke ESP32: {msg}")
+        except Exception as e:
+            print(f"❌ Gagal kirim pesan: {e}")
+    else:
+        print("❌ Client MQTT belum tersedia")

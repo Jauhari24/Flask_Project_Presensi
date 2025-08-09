@@ -5,23 +5,20 @@
   <div class="flex items-center justify-between flex-wrap gap-4 mb-6">
     <h2 class="text-2xl font-bold text-gray-800">Riwayat Presensi</h2>
 
-    <!-- Form Filter Tanggal -->
-    <form method="GET" action="{{ url_for('main.riwayat_presensi') }}" class="flex items-center gap-2">
+    <!-- Form Filter Tanggal (tidak kirim ke backend) -->
+    <form id="filterForm" class="flex items-center gap-2">
       <label for="tanggal" class="text-gray-600 text-sm hidden sm:block">Pilih Tanggal:</label>
-      <input type="date" id="tanggal" name="tanggal" class="border rounded-md px-3 py-2 text-sm text-gray-700"
-        value="{{ tanggal|default('', true) }}">
+      <input type="date" id="tanggal" name="tanggal" class="border rounded-md px-3 py-2 text-sm text-gray-700">
       <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm">
         Filter
       </button>
     </form>
   </div>
 
-  {% if tanggal %}
-  <div class="text-sm text-gray-600 mb-4">
+  <div id="tanggalInfo" class="text-sm text-gray-600 mb-4 hidden">
     Menampilkan presensi untuk tanggal:
-    <span class="font-semibold text-blue-600">{{ tanggal }}</span>
+    <span id="tanggalValue" class="font-semibold text-blue-600"></span>
   </div>
-  {% endif %}
 
   <!-- Filter Jumlah Data per Halaman -->
   <div class="flex justify-between mb-4">
@@ -59,16 +56,22 @@
   <div id="paginationControls" class="flex justify-center mt-4 space-x-1 text-sm"></div>
 </section>
 
-<!-- JavaScript Pagination -->
+<!-- JavaScript Pagination + Filter -->
 <script>
-  const dataPresensi = {{ data_riwayat_presensi| tojson | safe }};
+  const dataPresensi = {{ data_riwayat_presensi | tojson | safe }};
+  let filteredData = [...dataPresensi];
   let currentPage = 1;
   let perPage = 10;
 
   const tableBody = document.getElementById('tableBody');
   const paginationControls = document.getElementById('paginationControls');
   const perPageSelect = document.getElementById('perPageSelect');
+  const filterForm = document.getElementById('filterForm');
+  const tanggalInput = document.getElementById('tanggal');
+  const tanggalInfo = document.getElementById('tanggalInfo');
+  const tanggalValue = document.getElementById('tanggalValue');
 
+  // Pagination limit change
   perPageSelect.addEventListener('change', () => {
     perPage = parseInt(perPageSelect.value);
     currentPage = 1;
@@ -76,11 +79,33 @@
     renderPagination();
   });
 
+  // Filter berdasarkan tanggal
+  filterForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const selectedDate = tanggalInput.value;
+    if (!selectedDate) {
+      filteredData = [...dataPresensi];
+      tanggalInfo.classList.add('hidden');
+    } else {
+      filteredData = dataPresensi.filter(item => {
+        const itemDate = new Date(item.waktu_dibuat).toISOString().split('T')[0];
+        return itemDate === selectedDate;
+      });
+
+      tanggalValue.textContent = selectedDate;
+      tanggalInfo.classList.remove('hidden');
+    }
+    currentPage = 1;
+    renderTable();
+    renderPagination();
+  });
+
+  // Render Table
   function renderTable() {
     tableBody.innerHTML = '';
     const start = (currentPage - 1) * perPage;
     const end = start + perPage;
-    const pageItems = dataPresensi.slice(start, end);
+    const pageItems = filteredData.slice(start, end);
 
     if (pageItems.length === 0) {
       tableBody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-gray-500">Tidak ada data presensi.</td></tr>`;
@@ -88,7 +113,8 @@
     }
 
     for (const item of pageItems) {
-      const foto = item.data_karyawan.foto;
+      const gambarList = item.data_karyawan.gambar || [];
+      const fotoUtama = gambarList.length > 0 ? gambarList[0].name : null;
       const statusText = item.status ? 'Hadir' : 'Tidak Hadir';
       const statusClass = item.status ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700';
 
@@ -96,30 +122,32 @@
       const waktuFormatted = waktu.toLocaleDateString('id-ID') + ' ' + waktu.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
 
       const row = `
-        <tr class="hover:bg-gray-50">
-          <td class="px-4 py-2 border-b">${item.data_karyawan.id_kartu}</td>
-          <td class="px-4 py-2 border-b">${item.data_karyawan.nama}</td>
-          <td class="px-4 py-2 border-b">
-            ${foto
-          ? `<img src="/static/uploads/${foto}" class="h-10 w-10 rounded-full object-cover" alt="Foto">`
-          : `<span class="text-gray-400 italic">Tidak ada foto</span>`
-        }
-          </td>
-          <td class="px-4 py-2 border-b">${waktuFormatted}</td>
-          <td class="px-4 py-2 border-b">
-            <span class="px-2 py-1 rounded-full text-xs font-semibold ${statusClass}">
-              ${statusText}
-            </span>
-          </td>
-        </tr>
-      `;
+    <tr class="hover:bg-gray-50">
+      <td class="px-4 py-2 border-b">${item.data_karyawan.id_kartu}</td>
+      <td class="px-4 py-2 border-b">${item.data_karyawan.nama}</td>
+      <td class="px-4 py-2 border-b">
+        ${fotoUtama
+          ? `<img src="/static/uploads/${fotoUtama}" class="h-10 w-10 rounded-full object-cover" alt="Foto">`
+          : `<span class="text-gray-400 italic">Tidak ada foto</span>`}
+      </td>
+      <td class="px-4 py-2 border-b">${waktuFormatted}</td>
+      <td class="px-4 py-2 border-b">
+        <span class="px-2 py-1 rounded-full text-xs font-semibold ${statusClass}">
+          ${statusText}
+        </span>
+      </td>
+    </tr>
+  `;
       tableBody.insertAdjacentHTML('beforeend', row);
     }
+
   }
 
+
+  // Render Pagination
   function renderPagination() {
     paginationControls.innerHTML = '';
-    const totalPages = Math.ceil(dataPresensi.length / perPage);
+    const totalPages = Math.ceil(filteredData.length / perPage);
     for (let i = 1; i <= totalPages; i++) {
       const btn = document.createElement('button');
       btn.textContent = i;

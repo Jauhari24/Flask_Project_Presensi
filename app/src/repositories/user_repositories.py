@@ -1,37 +1,38 @@
 from app import db
 from app.src.model.schemas.data_karyawan import DataKaryawan
 from datetime import datetime
+from sqlalchemy.orm import joinedload
+from app.src.model.schemas.data_karyawan import DataKaryawan
+
 def get_all_karyawan_repository():
-    return DataKaryawan.query.all()
-def get_karyawan_by_id_repository(karyawan_id):
-    return DataKaryawan.query.get(karyawan_id)
-
-def create_karyawan_repository(data):
-    karyawan = DataKaryawan(
-        nama=data.get("nama"),
-        id_kartu=data.get("id_kartu"),
-        foto=data.get("foto"),
-        
+    return (
+        DataKaryawan.query
+        .options(joinedload(DataKaryawan.gambar))  # load relasi gambar
+        .all()
     )
-    db.session.add(karyawan)
+
+def get_karyawan_by_id_repository(karyawan_id):
+    return (
+        DataKaryawan.query
+        .options(joinedload(DataKaryawan.gambar))  # load relasi gambar
+        .get(karyawan_id)
+    )
+
+
+def create_riwayat_karyawan_repository(data):
+    riwayat = RiwayatPresensi(
+        status=data.get("status"),
+        waktu_dibuat=datetime.now(),
+        karyawan_id=data.get("karyawan_id"),
+    )
+    db.session.add(riwayat)
     db.session.commit()
-    return karyawan
+    return riwayat
 
-def update_karyawan_repository(karyawan_id, data):
-    karyawan = DataKaryawan.query.get(karyawan_id)
-    if karyawan:
-        karyawan.nama = data.get("nama")
-        karyawan.id_kartu = data.get("id_kartu")
-        karyawan.foto = data.get("foto")
-        karyawan.waktu_diubah = datetime.now()
-        db.session.commit()
-        return karyawan
-    return None 
-
-def delete_karyawan_repository(karyawan_id):
-    karyawan = DataKaryawan.query.get(karyawan_id)
-    if karyawan:
-        db.session.delete(karyawan)
+def delete_riwayat_karyawan_repository(karyawan_id):
+    riwayat = RiwayatPresensi.query.get(karyawan_id)
+    if riwayat:
+        db.session.delete(riwayat)
         db.session.commit()
         return True
     return False

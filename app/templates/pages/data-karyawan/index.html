@@ -9,15 +9,6 @@
       <a href="/form/data-karyawan" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
         Tambah Karyawan
       </a>
-
-      <!-- Filter Tanggal -->
-      <div class="flex items-center gap-2 text-sm text-gray-600 bg-gray-100 px-3 py-2 rounded-md">
-        <span class="text-lg">&#128197;</span>
-        <input type="date" name="tanggal" value="{{ tanggal or '' }}" class="bg-transparent outline-none text-sm">
-        <button type="submit" class="ml-2 bg-blue-500 hover:bg-blue-600 text-white text-xs px-3 py-1 rounded">
-          Filter
-        </button>
-      </div>
     </div>
   </form>
 
@@ -29,26 +20,33 @@
           <th class="px-4 py-2 text-left text-sm font-medium text-gray-600">ID Kartu</th>
           <th class="px-4 py-2 text-left text-sm font-medium text-gray-600">Nama Karyawan</th>
           <th class="px-4 py-2 text-left text-sm font-medium text-gray-600">Gambar</th>
+          <th class="px-4 py-2 text-left text-sm font-medium text-gray-600">Waktu Dibuat</th>
           <th class="px-4 py-2 text-left text-sm font-medium text-gray-600">Aksi</th>
         </tr>
       </thead>
-      <tbody class="bg-white divide-y divide-gray-100">
+      <tbody id="tableBody" class="bg-white divide-y divide-gray-100">
         {% for karyawan in data_karyawan %}
         <tr>
           <td class="px-4 py-2 text-sm text-gray-700">{{ karyawan.id_kartu }}</td>
           <td class="px-4 py-2 text-sm text-gray-700">{{ karyawan.nama }}</td>
           <td class="px-4 py-2 text-sm">
-            {% if karyawan.foto %}
-            <img src="{{ url_for('static', filename='uploads/' ~ karyawan.gambar) }}" alt="Foto"
-              class="w-10 h-10 rounded-full object-cover">
+            {% if karyawan.gambar and karyawan.gambar|length > 0 %}
+              <div class="flex gap-2">
+                {% for g in karyawan.gambar %}
+                  <img src="{{ url_for('static', filename='uploads/' ~ g.name) }}" 
+                       alt="Foto" 
+                       class="w-10 h-10 rounded-full object-cover">
+                {% endfor %}
+              </div>
             {% else %}
-            <span class="text-gray-400 italic">Tidak Ada Gambar</span>
+              <span class="text-gray-400 italic">Tidak Ada Gambar</span>
             {% endif %}
           </td>
+          <td class="px-4 py-2 text-sm text-gray-700">{{ karyawan.waktu_dibuat }}</td>
           <td class="px-4 py-2 text-sm">
             <a href="" class="text-white bg-blue-500 hover:bg-blue-600 px-3 py-1 rounded text-xs">Edit</a>
             <a href="" class="text-white bg-red-500 hover:bg-red-600 px-3 py-1 rounded text-xs ml-2"
-              onclick="return confirm('Yakin ingin menghapus data ini?')">Hapus</a>
+               onclick="return confirm('Yakin ingin menghapus data ini?')">Hapus</a>
           </td>
         </tr>
         {% else %}
