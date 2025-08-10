@@ -2,10 +2,10 @@
 
 {% block content %}
 {% set u = karyawan if karyawan is defined and karyawan else namespace(
-    id="",
-    uid="",
-    nama="",
-    gambar=[]
+id="",
+id_kartu="",
+nama="",
+gambar=[]
 ) %}
 
 <section class="p-6 bg-white rounded-xl shadow-md mt-6 mx-4 max-w-xl mx-auto">
@@ -13,19 +13,16 @@
         {{ 'Edit Karyawan' if u.id else 'Tambah Karyawan' }}
     </h2>
 
-    <form
-        method="POST"
-        enctype="multipart/form-data"
+    <form method="POST" enctype="multipart/form-data"
         action="{{ url_for('users.edit_karyawan', id=u.id) if u.id else url_for('users.tambah_karyawan') }}"
         class="space-y-4">
 
         <!-- ID Kartu -->
         <div>
-            <label for="uid" class="block text-sm font-medium text-gray-700">ID Kartu (Otomatis)</label>
+            <label for="id_kartu" class="block text-sm font-medium text-gray-700">ID Kartu (Otomatis)</label>
             <div class="flex space-x-2">
-                <input type="text" name="uid" id="uid" value="{{ u.uid }}"
-                    class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
-                    readonly required>
+                <input type="text" name="id_kartu" id="id_kartu" value="{{ u.id_kartu }}"
+                    class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2" readonly required>
                 {% if not u.id %}
                 <button type="button" id="btn-daftar-kartu"
                     class="bg-blue-600 text-white px-3 py-2 rounded hover:bg-blue-700">
@@ -50,7 +47,8 @@
             <div id="drop-area"
                 class="border-2 border-dashed border-gray-400 rounded p-6 text-center bg-gray-50 hover:bg-gray-100 cursor-pointer transition">
                 <p class="text-gray-600">Tarik & lepas gambar di sini atau klik untuk memilih</p>
-                <input type="file" id="gambar" name="gambar" accept="image/*" multiple class="hidden" {% if not u.id %}required{% endif %}>
+                <input type="file" id="gambar" name="gambar" accept="image/*" multiple class="hidden" {% if not u.id
+                    %}required{% endif %}>
             </div>
 
             <!-- Preview Gambar Baru -->
@@ -64,11 +62,10 @@
                     {% for img in u.gambar %}
                     <div class="relative group" data-img-id="{{ img.id }}">
                         <img src="{{ url_for('static', filename='uploads/' ~ img.name) }}"
-                             class="h-24 w-auto rounded border">
+                            class="h-24 w-auto rounded border">
                         <button type="button"
                             class="absolute -top-2 -right-2 bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-700"
-                            title="Hapus gambar"
-                            onclick="deleteOldImage('{{ img.id }}', this)">
+                            title="Hapus gambar" onclick="deleteOldImage('{{ img.id }}', this)">
                             &times;
                         </button>
                     </div>
@@ -80,8 +77,7 @@
 
         <!-- Submit -->
         <div class="pt-4">
-            <button type="submit"
-                class="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 transition">
+            <button type="submit" class="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 transition">
                 {{ 'Update' if u.id else 'Simpan' }}
             </button>
         </div>
@@ -92,112 +88,112 @@
 {% block scripts %}
 <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
 <script>
-document.addEventListener("DOMContentLoaded", () => {
-    const uidInput = document.getElementById('uid');
-    const socket = io("{{ config['FLASK_URL'] }}", { transports: ['websocket'] });
+    document.addEventListener("DOMContentLoaded", () => {
+        const IdkartuInput = document.getElementById('id_kartu');
+        const socket = io("{{ config['FLASK_URL'] }}", { transports: ['websocket'] });
 
-    // Update UID dari server
-    socket.on('rfid_update', (data) => {
-        if (data.register) {
-            uidInput.value = data.register;
-            uidInput.classList.add("border-green-500");
-            setTimeout(() => uidInput.classList.remove("border-green-500"), 1500);
-        }
-    });
-
-    // Daftar kartu
-    const daftarBtn = document.getElementById('btn-daftar-kartu');
-    if (daftarBtn) {
-        daftarBtn.addEventListener('click', () => {
-            daftarBtn.disabled = true;
-            daftarBtn.textContent = "Menunggu kartu...";
-            fetch('/daftar-kartu', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ daftar: "1" })
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (!data.success) alert('Gagal memulai pendaftaran kartu.');
-            })
-            .catch(() => alert('Kesalahan koneksi.'))
-            .finally(() => {
-                daftarBtn.disabled = false;
-                daftarBtn.textContent = "Daftar Kartu";
-            });
+        // Update ID Kartu dari server
+        socket.on('rfid_update', (data) => {
+            if (data.register) {
+                IdkartuInput.value = data.register;
+                IdkartuInput.classList.add("border-green-500");
+                setTimeout(() => IdkartuInput.classList.remove("border-green-500"), 1500);
+            }
         });
-    }
 
-    // Upload gambar
-    const dropArea = document.getElementById("drop-area");
-    const input = document.getElementById("gambar");
-    const preview = document.getElementById("preview");
-    let imageFiles = [];
-
-    const handleFiles = (files) => {
-        const newFiles = Array.from(files).filter(f => f.type.startsWith("image/"));
-        if (imageFiles.length + newFiles.length > 4) {
-            alert("Maksimal 4 gambar.");
-            return;
+        // Daftar kartu
+        const daftarBtn = document.getElementById('btn-daftar-kartu');
+        if (daftarBtn) {
+            daftarBtn.addEventListener('click', () => {
+                daftarBtn.disabled = true;
+                daftarBtn.textContent = "Menunggu kartu...";
+                fetch('/daftar-kartu', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ daftar: "1" })
+                })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (!data.success) alert('Gagal memulai pendaftaran kartu.');
+                    })
+                    .catch(() => alert('Kesalahan koneksi.'))
+                    .finally(() => {
+                        daftarBtn.disabled = false;
+                        daftarBtn.textContent = "Daftar Kartu";
+                    });
+            });
         }
-        newFiles.forEach(file => {
-            imageFiles.push(file);
-            const reader = new FileReader();
-            reader.onload = () => {
-                const wrapper = document.createElement("div");
-                wrapper.className = "relative";
-                wrapper.innerHTML = `
+
+        // Upload gambar
+        const dropArea = document.getElementById("drop-area");
+        const input = document.getElementById("gambar");
+        const preview = document.getElementById("preview");
+        let imageFiles = [];
+
+        const handleFiles = (files) => {
+            const newFiles = Array.from(files).filter(f => f.type.startsWith("image/"));
+            if (imageFiles.length + newFiles.length > 4) {
+                alert("Maksimal 4 gambar.");
+                return;
+            }
+            newFiles.forEach(file => {
+                imageFiles.push(file);
+                const reader = new FileReader();
+                reader.onload = () => {
+                    const wrapper = document.createElement("div");
+                    wrapper.className = "relative";
+                    wrapper.innerHTML = `
                     <img src="${reader.result}" class="h-24 w-auto rounded border">
                     <button type="button" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">&times;</button>
                 `;
-                wrapper.querySelector("button").onclick = () => {
-                    imageFiles = imageFiles.filter(f => f !== file);
-                    wrapper.remove();
-                    updateInputFiles();
+                    wrapper.querySelector("button").onclick = () => {
+                        imageFiles = imageFiles.filter(f => f !== file);
+                        wrapper.remove();
+                        updateInputFiles();
+                    };
+                    preview.appendChild(wrapper);
                 };
-                preview.appendChild(wrapper);
-            };
-            reader.readAsDataURL(file);
+                reader.readAsDataURL(file);
+            });
+            updateInputFiles();
+        };
+
+        const updateInputFiles = () => {
+            const dt = new DataTransfer();
+            imageFiles.forEach(file => dt.items.add(file));
+            input.files = dt.files;
+        };
+
+        dropArea.addEventListener("click", () => input.click());
+        dropArea.addEventListener("dragover", e => {
+            e.preventDefault();
+            dropArea.classList.add("bg-gray-200");
         });
-        updateInputFiles();
-    };
-
-    const updateInputFiles = () => {
-        const dt = new DataTransfer();
-        imageFiles.forEach(file => dt.items.add(file));
-        input.files = dt.files;
-    };
-
-    dropArea.addEventListener("click", () => input.click());
-    dropArea.addEventListener("dragover", e => {
-        e.preventDefault();
-        dropArea.classList.add("bg-gray-200");
-    });
-    dropArea.addEventListener("dragleave", () => dropArea.classList.remove("bg-gray-200"));
-    dropArea.addEventListener("drop", e => {
-        e.preventDefault();
-        dropArea.classList.remove("bg-gray-200");
-        handleFiles(e.dataTransfer.files);
-    });
-    input.addEventListener("change", () => handleFiles(input.files));
-
-    // Hapus gambar lama
-    window.deleteOldImage = (imageId, btnElement) => {
-        if (!confirm("Yakin ingin menghapus gambar ini?")) return;
-        fetch("", {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ image_id: imageId })
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                btnElement.closest('[data-img-id]').remove();
-            } else {
-                alert(data.message || 'Gagal menghapus gambar');
-            }
+        dropArea.addEventListener("dragleave", () => dropArea.classList.remove("bg-gray-200"));
+        dropArea.addEventListener("drop", e => {
+            e.preventDefault();
+            dropArea.classList.remove("bg-gray-200");
+            handleFiles(e.dataTransfer.files);
         });
-    };
-});
+        input.addEventListener("change", () => handleFiles(input.files));
+
+        // Hapus gambar lama
+        window.deleteOldImage = (imageId, btnElement) => {
+            if (!confirm("Yakin ingin menghapus gambar ini?")) return;
+            fetch("", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image_id: imageId })
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        btnElement.closest('[data-img-id]').remove();
+                    } else {
+                        alert(data.message || 'Gagal menghapus gambar');
+                    }
+                });
+        };
+    });
 </script>
 {% endblock %}

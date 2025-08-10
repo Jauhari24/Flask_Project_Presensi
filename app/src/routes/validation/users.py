@@ -5,13 +5,13 @@ def validate_karyawan_form(form, files=None):
     errors = []
     data_karyawan = {
         'id': form.get('id'),          # ID karyawan (opsional, ada kalau edit)
-        'uid': form.get('uid'),        # ID kartu
+        'id_kartu': form.get('id_kartu'),        # ID kartu
         'nama': form.get('nama'),      # Nama karyawan
         'gambar': []                   # List file image yang valid
     }
 
     # Validasi field wajib
-    if not data_karyawan['uid']:
+    if not data_karyawan['id_kartu']:
         errors.append("ID Kartu wajib diisi.")
     if not data_karyawan['nama']:
         errors.append("Nama karyawan wajib diisi.")

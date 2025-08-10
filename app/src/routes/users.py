@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, redirect, url_for, flash,request
 from app.src.routes.validation.login import login_required
 from app.src.routes.validation.users import validate_karyawan_form
+from app.src.services.karyawan_service import add_karyawan_service
 
 users = Blueprint('users', __name__)
 

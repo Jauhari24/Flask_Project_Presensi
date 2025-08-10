@@ -10,4 +10,4 @@ def start_background_services():
    
 if __name__=="__main__":
     start_background_services()
-    socketio.run(app, debug=True, port=5000, use_reloader=False)
+    socketio.run(app, debug=True, port=5000, use_reloader=False, allow_unsafe_werkzeug=True)
