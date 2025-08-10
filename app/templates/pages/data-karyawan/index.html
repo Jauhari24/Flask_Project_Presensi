@@ -34,9 +34,8 @@
             {% if karyawan.gambar and karyawan.gambar|length > 0 %}
             <div class="flex gap-2">
               {% for g in karyawan.gambar %}
-              <img src="{{ url_for('static', filename='uploads/' ~ g.name) }}" alt="Foto"
-                class="w-10 h-10 rounded-full object-cover cursor-pointer"
-                @click="modalImage='{{ url_for('static', filename='uploads/' ~ g.name) }}'; modalName='{{ karyawan.nama }}'; showModal=true">
+              <img src="{{  g.name }}" alt="Foto" class="w-10 h-10 rounded-full object-cover cursor-pointer"
+                @click="modalImage='{{ g.name }}'; modalName='{{ karyawan.nama }}'; showModal=true">
               {% endfor %}
             </div>
             {% else %}
@@ -45,7 +44,6 @@
           </td>
           <td class="px-4 py-2 text-sm text-gray-700">{{ karyawan.waktu_dibuat }}</td>
           <td class="px-4 py-2 text-sm">
-            <a href="" class="text-white bg-blue-500 hover:bg-blue-600 px-3 py-1 rounded text-xs">Edit</a>
             <button data-id="{{ karyawan.id }}"
               class="delete-user-btn text-white bg-red-500 hover:bg-red-600 px-3 py-1 rounded text-xs ml-2"
               type="button">Hapus</button>
@@ -85,7 +83,7 @@
 
       showConfirmModal("Apakah Anda Yakin Untuk Menghapus Pengguna Ini?", () => {
         fetch(`/delete-karyawan/${userId}`, {
-          method: 'POST',
+          method: 'DELETE',
           headers: { 'Content-Type': 'application/json' }
         })
           .then(response => {

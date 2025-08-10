@@ -56,3 +56,23 @@ def create_karyawan_repository(data):
         
     db.session.commit()
     return user
+
+
+# Gambar
+def get_karyawan_by_id_with_images(id):
+    karyawan = db.session.query(DataKaryawan).filter_by(id=id).first()  # Mengambil satu karyawan
+    # Ambil gambar terbaru berdasarkan created_at (pastikan field created_at ada pada model Gambar)
+    images = db.session.query(Gambar).filter_by(data_karyawan_id=id).order_by(Gambar.createdAt.desc()).all()
+
+    return karyawan, images  # Mengembalikan tuple (karyawan, latest_image)
+
+def delete_karyawan_by_id(karyawan_id):
+    karyawan = DataKaryawan.query.get(karyawan_id)
+    print(f"🔄 Menghapus karyawan dengan ID: {karyawan_id}")
+    if not karyawan:
+        return False
+    # delete associated images first
+    Gambar.query.filter_by(data_karyawan_id=karyawan.id).delete()
+    db.session.delete(karyawan)
+    db.session.commit()
+    return True
