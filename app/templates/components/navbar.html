@@ -23,6 +23,10 @@
 
     <!-- Dropdown -->
     <div id="dropdownMenu" class="absolute right-0 mt-2 w-40 bg-white rounded-md shadow-md border hidden z-50">
+      <button onclick="openCctvModal()"
+        class="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 hover:text-blue-600 transition duration-150">
+        Edit Kamera
+      </button>
       <a href="{{ url_for('auth.logout') }}"
         class="block px-4 py-2 text-gray-700 hover:bg-gray-100 hover:text-red-600 transition duration-150">
         Logout

@@ -101,6 +101,7 @@ def take_snapshot(ESP_URL):
     return filename
 
 def start_capture_thread(RTSP_URL):
+    
     global streaming_active
     
     cap = cv2.VideoCapture(RTSP_URL)

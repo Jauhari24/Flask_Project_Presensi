@@ -30,7 +30,7 @@ def create_app():
     db.init_app(app)
     migrate.init_app(app, db)
     socketio.init_app(app) # Pasang SocketIO ke Flask app
-    from app.src.model.schemas import DataKaryawan,RiwayatPresensi, Gambar
+    from app.src.model.schemas import DataKaryawan,RiwayatPresensi, Gambar,CCTV
     
         
     

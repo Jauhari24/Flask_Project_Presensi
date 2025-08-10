@@ -1,0 +1,69 @@
+<!-- Modal CCTV -->
+<div id="modalCctv" class="fixed inset-0 z-50 hidden bg-black bg-opacity-50 flex items-center justify-center">
+    <div class="bg-white rounded-lg shadow-lg w-full max-w-md p-6">
+        <h2 class="text-xl font-semibold mb-4">Edit Link Kamera</h2>
+
+        <form id="formCctv" novalidate>
+            <div class="mb-4">
+                <label for="url" class="block text-gray-700 font-medium mb-2">HTTP Link Kamera</label>
+                <input type="url" id="url" name="url" placeholder="http://..."
+                    class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value="{{ camera.url or '' }}" required>
+            </div>
+
+            <div class="flex justify-end space-x-3">
+                <button type="button" onclick="closeCctvModal()"
+                    class="px-4 py-2 bg-gray-300 rounded-lg hover:bg-gray-400 transition">
+                    Batal
+                </button>
+                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                    Simpan
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Buka modal
+    function openCctvModal() {
+        document.getElementById('modalCctv').classList.remove('hidden');
+    }
+
+    // Tutup modal
+    function closeCctvModal() {
+        document.getElementById('modalCctv').classList.add('hidden');
+    }
+
+    // Submit form AJAX
+    function submitCctvForm(event) {
+        event.preventDefault();
+
+        const form = document.getElementById('formCctv');
+        const formData = new FormData(form);
+
+        fetch("/update-cctv/{{ camera.id }}", {
+            method: 'POST',
+            body: formData,
+        })
+            .then(response => {
+                if (response.ok) {
+                    closeCctvModal();
+                    location.reload();
+                } else {
+                    return response.text().then(text => {
+                        alert("Error: " + text);
+                    });
+                }
+            })
+            .catch(error => {
+                alert("Terjadi kesalahan: " + error);
+            });
+    }
+
+    // Pasang event listener saat DOM siap
+    document.addEventListener('DOMContentLoaded', function () {
+        const form = document.getElementById('formCctv');
+        form.addEventListener('submit', submitCctvForm);
+    });
+</script>
