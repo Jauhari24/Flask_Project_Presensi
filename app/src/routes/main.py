@@ -50,15 +50,3 @@ def form_data_karyawan():
         'pages/data-karyawan/form/index.html',current_path=request.path,camera=camera
     )
 
-
-
-@main.route("/update-cctv/<id>", methods=["POST"])
-def update_cctv(id):
-    cctv_link = request.form.get("url")
-    try:
-        update_cctv_link_repository(cctv_link)  # Lakukan update CCTV link di database
-        flash("CCTV link updated successfully!", "success")
-    except Exception as e:
-        print("Error updating CCTV link:", e)
-        flash("Error updating CCTV link: " + str(e), "danger")
-    return redirect(url_for("main.home"))

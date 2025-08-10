@@ -38,10 +38,12 @@ def create_app():
     from app.src.routes.auth import auth
     from app.src.routes.users import users
     from app.src.routes.card import card
+    from app.src.routes.cctv import cctv
     
     app.register_blueprint(main)
     app.register_blueprint(auth)
     app.register_blueprint(users)
     app.register_blueprint(card)
+    app.register_blueprint(cctv)
 
     return app

@@ -100,11 +100,11 @@ def take_snapshot(ESP_URL):
     print(f"[INFO] Snapshot saved at {filename}")
     return filename
 
-def start_capture_thread(RTSP_URL):
+def start_capture_thread(ESP_URL):
     
     global streaming_active
     
-    cap = cv2.VideoCapture(RTSP_URL)
+    cap = cv2.VideoCapture(ESP_URL)
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
     cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
@@ -112,11 +112,11 @@ def start_capture_thread(RTSP_URL):
         return
     streaming_active = True
     # Jalankan thread capture
-    threading.Thread(target=capture_thread, args=(RTSP_URL,), daemon=True).start()
+    threading.Thread(target=capture_thread, args=(ESP_URL,), daemon=True).start()
 
-def capture_thread(RTSP_URL):
+def capture_thread(ESP_URL):
     global frame_buffer
-    cap = cv2.VideoCapture(RTSP_URL, cv2.CAP_FFMPEG)
+    cap = cv2.VideoCapture(ESP_URL, cv2.CAP_FFMPEG)
 
     if not cap.isOpened():
         print("[ERROR] Failed to open RTSP stream.")

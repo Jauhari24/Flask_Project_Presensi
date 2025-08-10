@@ -46,12 +46,12 @@
   {% include 'components/form_modal.html' %}
 
   <!-- Include toast component -->
+  {% include 'components/toast/toast.html' %}
   {% include "components/toast/toastjs.html" %}
 
   {% include "components/modal.html" %}
   {% include "components/confirm_modal.html" %}
 
-  {% include 'components/toast/toast.html' %}
   <!-- Main Content -->
   <main class="p-6 md:p-10 max-w-7xl mx-auto">
     {% block content %}{% endblock %}
