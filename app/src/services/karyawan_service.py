@@ -10,11 +10,20 @@ def serialize_datetime(dt):
 
 def get_all_riwayat_karyawan_service():
     raw_data = get_all_riwayat_karyawan_repository()
-    return [
-        {
+    print(f"📊 Total riwayat karyawan: {len(raw_data)}")
+
+    result = []
+    for item in raw_data:
+        if not item.data_karyawan:
+            # Skip kalau data karyawan sudah tidak ada
+            print(f"⚠️ Riwayat ID {item.id} tidak punya data karyawan, dilewati.")
+            continue
+
+        result.append({
             "id": item.id,
             "status": item.status,
             "waktu_dibuat": serialize_datetime(item.waktu_dibuat),
+            "gambar": item.gambar or "",
             "data_karyawan": {
                 "id": item.data_karyawan.id,
                 "nama": item.data_karyawan.nama,
@@ -29,9 +38,10 @@ def get_all_riwayat_karyawan_service():
                     for g in item.data_karyawan.gambar
                 ]
             }
-        }
-        for item in raw_data
-    ]
+        })
+    return result
+
+
 def add_karyawan_service(data):
     try:
         # Cek Finger ID

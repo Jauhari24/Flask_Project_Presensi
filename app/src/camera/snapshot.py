@@ -15,7 +15,7 @@ def load_known_faces():
     known_face_encodings = []
     known_face_names = []
 
-    base_path = "app/src/static/train model/snapshots"
+    base_path = os.path.join("app", "static", "train model", "snapshots")
     cache_path = "app/src/camera/face_cache.pkl"
 
     cache_data = {}
@@ -89,7 +89,7 @@ def take_snapshot(ESP_URL):
         return None
 
     # Buat folder jika belum ada
-    output_dir = "app/src/static/snapshots/captured"
+    output_dir = "app/static/snapshots/captured"
     os.makedirs(output_dir, exist_ok=True)
 
     # Simpan frame ke file

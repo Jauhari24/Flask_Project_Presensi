@@ -33,7 +33,7 @@ def riwayat_presensi():
     # Halaman tabel semua riwayat presensi karyawan
     # data_presensi = get_all_presensi_service()
     data_riwayat_presensi = get_all_riwayat_karyawan_service()
-    print(data_riwayat_presensi)
+    
     return render_template(
         'pages/riwayat-presensi/index.html',current_path=request.path,
         data_riwayat_presensi=data_riwayat_presensi,

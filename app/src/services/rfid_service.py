@@ -1,159 +1,181 @@
 import face_recognition
-from app.src.camera.snapshot import take_snapshot
+import os
+import time
+import numpy as np
+import face_recognition
 
-# 🔄 Fungsi untuk mengirim perintah fingerprint
-def fingerprint_auth(value_parsed,app):
+# Repos & util imports
+from app.src.repositories.cctv_repositories import get_cctv_link_repository
+from app.src.repositories.riwayat_presensi_repositories import create_riwayat_karyawan_repository
+from app.src.repositories.user_repositories import get_karyawan_by_rfid_id
+
+# Import modul utility camera (variabel shared: known_face_encodings, known_face_names, face_data_lock, faces_loaded)
+from app.src.utils import camera as camera_utils
+
+# Import take_snapshot dan load_known_faces (coba kedua kemungkinan lokasi)
+try:
+    from app.src.camera.snapshot import load_known_faces, take_snapshot
+except Exception:
+    # fallback ke snapshot modul jika ada
+    from app.src.camera.snapshot import load_known_faces, take_snapshot
+
+
+def _take_snapshot_with_retries(camera_url, retries=3, delay=0.6):
+    """
+    Wrapper take_snapshot dengan retry: mengurangi kasus snapshot kosong.
+    Return: full path file snapshot atau None.
+    """
+    for attempt in range(1, retries + 1):
+        try:
+            path = take_snapshot(camera_url)
+        except Exception as e:
+            print(f"[WARN] take_snapshot error attempt {attempt}: {e}")
+            path = None
+
+        if path and os.path.exists(path):
+            return path
+
+        print(f"[WARN] Snapshot gagal atau tidak ada file. Attempt {attempt}/{retries}")
+        time.sleep(delay)
+
+    return None
+
+def rfid_auth(value_parsed, app):
     from datetime import datetime
+    # import layanan mqtt dinamis agar modul tidak circular
     from app.src.services.mqtt_service import send_message_command
     import os
-    import time
 
-
-    # Ambil data RTSP
-    data_door_access = get_all_cctv()
-    if not data_door_access:
-        print("❌ Tidak ada data RTSP tersedia")
+    # Ambil link kamera (bisa http atau rtsp tergantung config)
+    camera_access = get_cctv_link_repository()
+    if not camera_access:
+        print("❌ Tidak ada data CCTV tersedia")
         return
-    rtsp_url = data_door_access.rtsp
+    camera_url = camera_access.url
 
-    send_message_command(f"Scan Wajah")
-    time.sleep(3)
-    # Ambil snapshot
-    snapshot_full_path = take_snapshot(rtsp_url)  # Full path dari fungsi
+    # Kirim perintah/feedback ke device/UI
+    send_message_command("Scan Wajah")
+    time.sleep(1.5)  # kasih sedikit jeda sebelum ambil gambar
+
+    # Ambil snapshot dengan retry
+    snapshot_full_path = _take_snapshot_with_retries(camera_url, retries=4, delay=0.6)
     if not snapshot_full_path or not os.path.exists(snapshot_full_path):
+        print("[ERROR] Gagal ambil gambar dari CCTV")
         send_message_command("Gagal ambil gambar")
         return
+    print(f"📸 Gambar diambil: {snapshot_full_path}")
 
-    # Dapatkan path yang disimpan ke database
-    if 'static/' in snapshot_full_path:
-        idx = snapshot_full_path.index('static/')
-        snapshot_path_for_db = snapshot_full_path[idx:]  # Misal: static/snapshots/...
+    # Normalisasi path yang disimpan di DB (relatif ke static/)
+    if 'static/' in snapshot_full_path.replace("\\", "/"):
+        idx = snapshot_full_path.replace("\\", "/").index('static/')
+        snapshot_path_for_db = snapshot_full_path.replace("\\", "/")[idx:]
     else:
-        snapshot_path_for_db = snapshot_full_path  # fallback aman
+        snapshot_path_for_db = snapshot_full_path
 
-    # Dapatkan user dari fingerprint
-    user = get_user_by_fingerprint_id(value_parsed)
-    if not user:
-        print("❌ Fingerprint tidak dikenali")
+    # Ambil user berdasarkan RFID
+    rfid_user = get_karyawan_by_rfid_id(value_parsed)
+    if not rfid_user:
+        print("❌ RFID tidak dikenali")
         send_message_command("User tidak ditemukan")
-        send_door_status_command("1")
-        create_door_access(
+        create_riwayat_karyawan_repository(
             data={
-                'name': "Tidak diketahui",
-                'finger': 0,
-                'img': snapshot_path_for_db,
-                'door_access': "false",
-                'access_time': datetime.now()
+                'status': "Tidak Diketahui",
+                'gambar': snapshot_path_for_db,
+                'karyawan_id': 0
             }
         )
         return
 
-    # Tidak ada akses pintu
-    if user.door_access == 'false':
-        send_message_command("Akses pintu ditutup")
-        send_door_status_command("1")
-        create_door_access(
-            data={
-                'name': user.name,
-                'finger': str(user.finger_id),
-                'img': snapshot_path_for_db,
-                'door_access': str(user.door_access),
-                'access_time': datetime.now()
-            }
-        )
-        return
-    
-    # Face recognition
-    # load_known_faces()
+    # Pastikan data wajah dikenal sudah dimuat (gunakan modul camera_utils supaya update faces_loaded berhasil)
+    with camera_utils.face_data_lock:
+        # Jika belum ter-load, panggil load_known_faces()
+        if not getattr(camera_utils, "faces_loaded", False) or not getattr(camera_utils, "known_face_encodings", None):
+            print("[INFO] Memuat data wajah dikenal...")
+            try:
+                # load_known_faces dapat mengembalikan tuple (encodings, names) atau mengisi global di modul kameranya
+                load_result = load_known_faces()
+                # Jika fungsi mengembalikan data, sinkronkan ke modul camera_utils
+                if isinstance(load_result, tuple) and len(load_result) >= 2:
+                    encs, names = load_result[0], load_result[1]
+                    camera_utils.known_face_encodings = encs
+                    camera_utils.known_face_names = names
+                # set flag agar tidak reload berkali-kali
+                camera_utils.faces_loaded = True
+                print(f"[INFO] Jumlah wajah dikenal: {len(getattr(camera_utils, 'known_face_encodings', []))}")
+            except Exception as e:
+                print(f"[ERROR] Gagal load_known_faces(): {e}")
 
+    # Baca snapshot dan lakukan encoding wajah
     try:
         image = face_recognition.load_image_file(snapshot_full_path)
     except FileNotFoundError:
         send_message_command("Gambar tidak ada")
-        send_door_status_command("1")
+        return
+    except Exception as e:
+        print(f"[ERROR] Tidak dapat memuat file gambar: {e}")
+        send_message_command("Gagal baca gambar")
         return
 
-    face_encodings = face_recognition.face_encodings(image)
+    face_encodings = face_recognition.face_encodings(image, model='hog')
     if not face_encodings:
         send_message_command("Wajah tidak terdeteksi")
-        send_door_status_command("1")
+        # Simpan riwayat "tidak terdeteksi" jika perlu
+        create_riwayat_karyawan_repository({
+            'status': 0,
+            'gambar': snapshot_path_for_db,
+            'karyawan_id': rfid_user.id if rfid_user else 0
+        })
         return
-    
-    # Load data wajah dikenal
-    # known_face_encodings, known_face_names = load_known_faces()
-    # if not known_face_encodings:
-    #     send_message_command("Data wajah kosong")
-    #     send_door_status_command("1")
-    #     return
-    # matches = face_recognition.compare_faces(known_face_encodings, face_encodings[0], tolerance=0.65)
-    # if True in matches:
-    #     matched_index = matches.index(True)
-    #     matched_name = known_face_names[matched_index]
-    #     if user.name.lower().replace(" ", "_") in matched_name.lower():
-    #         send_message_command(f"Pintu Terbuka")
-    #         send_door_status_command("0")
-          
-    #         create_door_access(
-    #             data={
-    #                 'name': user.name,
-    #                 'finger': str(user.finger_id),
-    #                 'img': snapshot_path_for_db,
-    #                 'door_access': str(user.door_access),
-    #                 'access_time': datetime.now()
-    #             }
-    #         )
-    #     else:
-    #         send_message_command("Wajah tidak cocok")
-    #         create_door_access(data={
-    #             'name': 'Wajah Tidak cocok',
-    #             'finger': str(user.finger_id),
-    #             'img': snapshot_path_for_db,
-    #             'door_access': 'false',
-    #             'access_time': datetime.now()
-    #         })
-    #         send_door_status_command("1")
-    # else:
-    #     send_message_command("Wajah tidak dikenali")
-    #     send_door_status_command("1")
- 
-    matched_name = None
-    with face_data_lock:
-        if not known_face_encodings:
+
+    # Pastikan known_face_encodings tidak kosong
+    with camera_utils.face_data_lock:
+        known_encs = getattr(camera_utils, "known_face_encodings", [])
+        known_names = getattr(camera_utils, "known_face_names", [])
+
+        if not known_encs:
             send_message_command("Data wajah kosong")
-            send_door_status_command("1")
+            create_riwayat_karyawan_repository({
+                'status': 0,
+                'gambar': snapshot_path_for_db,
+                'karyawan_id': rfid_user.id
+            })
             return
 
-        face_distances = face_recognition.face_distance(known_face_encodings, face_encodings[0])
-        best_match_index = np.argmin(face_distances)
-        best_distance = face_distances[best_match_index]
-        threshold = 0.45  # Sesuaikan threshold
+        # Hitung jarak wajah dan cari best match
+        try:
+            face_distances = face_recognition.face_distance(known_encs, face_encodings[0])
+            best_match_index = np.argmin(face_distances)
+            best_distance = float(face_distances[best_match_index])
+        except Exception as e:
+            print(f"[ERROR] Perhitungan jarak wajah gagal: {e}")
+            send_message_command("Gagal proses wajah")
+            return
 
+        threshold = 0.45  # sesuaikan threshold sesuai quality dataset
+        matched_name = None
         if best_distance < threshold:
-            matched_name = known_face_names[best_match_index]
+            matched_name = known_names[best_match_index]
 
-    # Verifikasi hasil
-    expected_name = user.name.lower().replace(" ", "_")
-
+    # Verifikasi nama yang cocok dengan user RFID
+    expected_name = rfid_user.nama.lower().replace(" ", "_")
     if matched_name and matched_name.lower() == expected_name:
-        send_message_command("Pintu Terbuka")
-        send_door_status_command("0")
-        create_door_access({
-            'name': user.name,
-            'finger': str(user.finger_id),
-            'img': snapshot_path_for_db,
-            'door_access': str(user.door_access),
-            'access_time': datetime.now()
+        send_message_command("Login Berhasil")
+        create_riwayat_karyawan_repository({
+            'status': 1,
+            'gambar': snapshot_path_for_db,
+            'karyawan_id': rfid_user.id
         })
     elif matched_name:
         send_message_command("Wajah tidak cocok")
-        send_door_status_command("1")
-        create_door_access({
-            'name': 'Wajah Tidak cocok',
-            'finger': str(user.finger_id),
-            'img': snapshot_path_for_db,
-            'door_access': 'false',
-            'access_time': datetime.now()
+        create_riwayat_karyawan_repository({
+            'status': 0,
+            'gambar': snapshot_path_for_db,
+            'karyawan_id': rfid_user.id
         })
     else:
         send_message_command("Wajah tidak dikenali")
-        send_door_status_command("1")
+        create_riwayat_karyawan_repository({
+            'status': 0,
+            'gambar': snapshot_path_for_db,
+            'karyawan_id': rfid_user.id
+        })

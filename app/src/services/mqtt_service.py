@@ -109,9 +109,9 @@ def handle_rfid_data_factory(app_instance):
         # ✅ Bungkus bagian yang mengakses Flask context
         if label == "login":
             with app_instance.app_context():
-                
-                print(f"📥 Data login diterima: {value}")
-    
+                from app.src.services.rfid_service import rfid_auth
+                rfid_auth(value, app_instance)
+
     return handle_rfid_data
         
         

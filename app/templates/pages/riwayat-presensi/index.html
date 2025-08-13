@@ -113,8 +113,8 @@
     }
 
     for (const item of pageItems) {
-      const gambarList = item.data_karyawan.gambar || [];
-      const fotoUtama = gambarList.length > 0 ? gambarList[0].name : null;
+      const gambarList = item.gambar;
+      console.log(gambarList);
       const statusText = item.status ? 'Hadir' : 'Tidak Hadir';
       const statusClass = item.status ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700';
 
@@ -126,8 +126,8 @@
       <td class="px-4 py-2 border-b">${item.data_karyawan.id_kartu}</td>
       <td class="px-4 py-2 border-b">${item.data_karyawan.nama}</td>
       <td class="px-4 py-2 border-b">
-        ${fotoUtama
-          ? `<img src="/static/uploads/${fotoUtama}" class="h-10 w-10 rounded-full object-cover" alt="Foto">`
+        ${gambarList
+          ? `<img src="./${gambarList}" class="h-10 w-10 rounded-full object-cover" alt="Foto">`
           : `<span class="text-gray-400 italic">Tidak ada foto</span>`}
       </td>
       <td class="px-4 py-2 border-b">${waktuFormatted}</td>
