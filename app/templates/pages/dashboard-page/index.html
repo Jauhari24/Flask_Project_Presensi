@@ -5,7 +5,9 @@
 <section class="bg-white p-6 rounded-xl shadow-md mb-6 flex items-center space-x-6">
   <img src="{{ url_for('static', filename='img/Manan.jfif') }}" alt="Logo" class="h-20 w-20 object-contain" />
   <div>
-    <p class="text-lg font-semibold text-gray-800">Selamat datang <span class="text-blue-600">Admin</span>.</p>
+    <p class="text-lg font-semibold text-gray-800">
+      Selamat datang <span class="text-blue-600">Admin</span>.
+    </p>
     <p class="text-sm text-gray-600">Ini adalah halaman Dashboard presensi karyawan.</p>
   </div>
 </section>
@@ -14,12 +16,12 @@
 <section class="bg-white p-6 rounded-xl shadow-md mb-6">
   <div class="flex justify-between items-center flex-wrap gap-4">
     <div class="text-gray-700 space-y-1">
-      <div><span class="font-medium">Jumlah Hadir:</span> ...</div>
-      <div><span class="font-medium">Telat:</span> ...</div>
+      <div><span class="font-medium">Jumlah Hadir:</span> {{ jumlah_hadir }}</div>
+      <div><span class="font-medium">Telat:</span> {{ jumlah_telat }}</div>
     </div>
     <div class="flex items-center space-x-2 text-gray-600">
       <span class="material-icons text-xl text-blue-600">calendar_today</span>
-      <span>Kamis, 21 Agustus 2025</span>
+      <span>{{ tanggal }}</span>
     </div>
   </div>
 </section>
@@ -39,18 +41,35 @@
         </tr>
       </thead>
       <tbody class="divide-y divide-gray-200">
-        <!-- Loop data presensi -->
-        <!-- Contoh data dummy -->
+        {% for presensi in data_riwayat_presensi %}
         <tr>
-          <td class="px-4 py-2">Id</td>
-          <td class="px-4 py-2">Jauhari</td>
+          <td class="px-4 py-2">{{ presensi.data_karyawan.id_kartu }}</td>
+          <td class="px-4 py-2">{{ presensi.data_karyawan.nama }}</td>
           <td class="px-4 py-2">
-            <img src="{{ url_for('static', filename='foto/wintrt.jpg') }}" alt="Foto"
-              class="h-10 w-10 rounded-full object-cover">
+            <img src="{{ url_for('static', filename='foto/' ~ (presensi.data_karyawan.foto or 'default.jpg')) }}"
+                 alt="Foto" class="h-10 w-10 rounded-full object-cover">
           </td>
-          <td class="px-4 py-2">07:55</td>
-          <td class="px-4 py-2 text-green-600 font-semibold">Tepat Waktu</td>
+          <td class="px-4 py-2">{{ presensi.waktu_dibuat.strftime("%H:%M") }}</td>
+          <td class="px-4 py-2 font-semibold
+              {% if presensi.status %}
+                  text-green-600
+              {% else %}
+                  text-red-600
+              {% endif %}">
+            {% if presensi.status %}
+              Tepat Waktu
+            {% else %}
+              Telat
+            {% endif %}
+          </td>
         </tr>
+        {% else %}
+        <tr>
+          <td colspan="5" class="text-center py-4 text-gray-500">
+            Belum ada data presensi hari ini
+          </td>
+        </tr>
+        {% endfor %}
       </tbody>
     </table>
   </div>

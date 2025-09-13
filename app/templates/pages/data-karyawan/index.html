@@ -12,6 +12,17 @@
       </a>
     </div>
   </form>
+  <div class="flex justify-between items-center mb-4">
+    <h2 class="text-2xl font-semibold text-gray-800">Data Presensi</h2>
+    <div>
+      <form method="GET" action="/riwayat-presensi/export-pdf" class="flex gap-2">
+        <input type="month" name="bulan" class="border rounded px-2 py-2 text-sm" required>
+        <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 text-sm">
+          Export PDF
+        </button>
+      </form>
+    </div>
+  </div>
 
   <!-- Tabel Data -->
   <div class="overflow-x-auto">
